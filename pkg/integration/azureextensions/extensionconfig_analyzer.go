@@ -48,13 +48,29 @@ func (e *ExtensionConfigAnalyzer) Analyze(a common.Analyzer) ([]common.Result, e
 		for _, ec := range list.Items {
 			failures := analyzeExtensionConfig(ec, source)
 
-			// Enrich with ExtensionEvents from the same namespace
-			eventFailures := getExtensionEvents(dynamicClient, a, ec)
-			failures = append(failures, eventFailures...)
+			// Only do deep diagnostics if there are failures
+			if len(failures) > 0 {
+				ns := ec.GetNamespace()
+				name := ec.GetName()
 
-			// Enrich with pod-level diagnostics in the extension namespace
-			podFailures := getPodDiagnostics(a, ec)
-			failures = append(failures, podFailures...)
+				// Enrich with ExtensionEvents
+				failures = append(failures, getExtensionEvents(dynamicClient, a, ec)...)
+
+				// Enrich with Helm release diagnostics
+				failures = append(failures, getHelmDiagnostics(a, ns, name)...)
+
+				// Enrich with failed Jobs (Helm hooks)
+				failures = append(failures, getJobDiagnostics(a, ns)...)
+
+				// Enrich with Deployment health
+				failures = append(failures, getDeploymentDiagnostics(a, ns)...)
+
+				// Enrich with pod-level diagnostics + logs
+				failures = append(failures, getPodDiagnostics(a, ec)...)
+
+				// Enrich with K8s warning events
+				failures = append(failures, getK8sEvents(a, ns)...)
+			}
 
 			if len(failures) > 0 {
 				result := common.Result{
