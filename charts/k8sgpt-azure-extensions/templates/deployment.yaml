@@ -25,14 +25,53 @@ spec:
     spec:
       serviceAccountName: {{ .Values.serviceAccount.name }}
       initContainers:
-        - name: init-config
+        - name: init-integration
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ["/k8sgpt"]
+          args: ["integrations", "activate", "azureextensions", "--no-install"]
+          env:
+            - name: XDG_CONFIG_HOME
+              value: /tmp/k8sgpt-config
+          volumeMounts:
+            - name: config-dir
+              mountPath: /tmp/k8sgpt-config
+        - name: init-auth
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           command: ["/k8sgpt"]
           args:
-            - integrations
-            - activate
-            - azureextensions
-            - --no-install
+            - auth
+            - add
+            - --backend
+            - {{ .Values.ai.backend }}
+            - --model
+            - {{ .Values.ai.model }}
+            {{- if .Values.ai.baseUrl }}
+            - --baseurl
+            - {{ .Values.ai.baseUrl }}
+            {{- end }}
+            {{- if .Values.ai.engine }}
+            - --engine
+            - {{ .Values.ai.engine }}
+            {{- end }}
+            - --password
+            - $(K8SGPT_PASSWORD)
+          env:
+            - name: XDG_CONFIG_HOME
+              value: /tmp/k8sgpt-config
+            {{- if $secretName }}
+            - name: K8SGPT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: {{ .Values.ai_secret.existingSecretKey | default "api-key" }}
+            {{- end }}
+          volumeMounts:
+            - name: config-dir
+              mountPath: /tmp/k8sgpt-config
+        - name: init-default
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ["/k8sgpt"]
+          args: ["auth", "default", "--provider", "{{ .Values.ai.backend }}"]
           env:
             - name: XDG_CONFIG_HOME
               value: /tmp/k8sgpt-config
@@ -46,33 +85,14 @@ spec:
           args:
             - serve
             - --http
+            - --backend
+            - {{ .Values.ai.backend }}
             {{- range (splitList "," .Values.analyze.filters) }}
             - --filter={{ . | trim }}
             {{- end }}
           env:
             - name: XDG_CONFIG_HOME
               value: /tmp/k8sgpt-config
-            - name: K8SGPT_BACKEND
-              value: {{ .Values.ai.backend | quote }}
-            - name: K8SGPT_MODEL
-              value: {{ .Values.ai.model | quote }}
-            {{- if .Values.ai.baseUrl }}
-            - name: K8SGPT_BASEURL
-              value: {{ .Values.ai.baseUrl | quote }}
-            {{- end }}
-            {{- if .Values.ai.engine }}
-            - name: K8SGPT_ENGINE
-              value: {{ .Values.ai.engine | quote }}
-            {{- end }}
-            - name: K8SGPT_TEMPERATURE
-              value: {{ .Values.ai.temperature | quote }}
-            {{- if $secretName }}
-            - name: K8SGPT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ $secretName }}
-                  key: {{ .Values.ai_secret.existingSecretKey | default "api-key" }}
-            {{- end }}
           volumeMounts:
             - name: config-dir
               mountPath: /tmp/k8sgpt-config
