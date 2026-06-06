@@ -81,6 +81,8 @@ func analyzeExtensionConfig(ec unstructured.Unstructured, source string) []commo
 
 	// Check status.status
 	status, _, _ := unstructured.NestedString(ec.Object, "status", "status")
+	extensionState, _, _ := unstructured.NestedString(ec.Object, "status", "extensionState")
+
 	switch status {
 	case StatusFailed:
 		failures = append(failures, common.Failure{
@@ -95,11 +97,14 @@ func analyzeExtensionConfig(ec unstructured.Unstructured, source string) []commo
 			Sensitive: []common.Sensitive{},
 		})
 	case "":
-		failures = append(failures, common.Failure{
-			Text: fmt.Sprintf("%s extension '%s' (type: %s) in namespace '%s' has empty status — may not have been reconciled.",
-				source, name, extensionType, ns),
-			Sensitive: []common.Sensitive{},
-		})
+		// Only flag empty status if extensionState is also not healthy
+		if extensionState != "Available" && extensionState != StatusInstalled {
+			failures = append(failures, common.Failure{
+				Text: fmt.Sprintf("%s extension '%s' (type: %s) in namespace '%s' has empty status — may not have been reconciled.",
+					source, name, extensionType, ns),
+				Sensitive: []common.Sensitive{},
+			})
+		}
 	}
 
 	// Check status.reconciliationError
@@ -117,8 +122,7 @@ func analyzeExtensionConfig(ec unstructured.Unstructured, source string) []commo
 	}
 
 	// Check status.extensionState
-	extensionState, found, _ := unstructured.NestedString(ec.Object, "status", "extensionState")
-	if found && extensionState != "" && extensionState != StatusInstalled {
+	if extensionState != "" && extensionState != StatusInstalled && extensionState != "Available" {
 		failures = append(failures, common.Failure{
 			Text: fmt.Sprintf("Extension '%s' extensionState is '%s' (expected: Installed).", name, extensionState),
 			Sensitive: []common.Sensitive{},
