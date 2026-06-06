@@ -9,8 +9,12 @@
         "Connectedclusters",
         "Managedclusters"
     ],
-    "internalTestSubscriptions": [],
-    "adminSubscriptions": [],
+    "internalTestSubscriptions": [
+        "d348763b-789e-402d-9b75-b5bfc4d14c11"
+    ],
+    "adminSubscriptions": [
+        "d348763b-789e-402d-9b75-b5bfc4d14c11"
+    ],
     "allowedTenants": null,
     "spnClientId": null,
     "spnTenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
