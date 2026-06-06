@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "k8sgpt-azure-extensions.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "k8sgpt-azure-extensions.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "k8sgpt-azure-extensions.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "k8sgpt-azure-extensions.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      containers:
+        - name: k8sgpt
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - serve
+          env:
+            - name: XDG_CONFIG_HOME
+              value: /tmp/k8sgpt-config
+            - name: K8SGPT_BACKEND
+              value: {{ .Values.ai.backend | quote }}
+            - name: K8SGPT_MODEL
+              value: {{ .Values.ai.model | quote }}
+            {{- if .Values.ai.baseUrl }}
+            - name: K8SGPT_BASEURL
+              value: {{ .Values.ai.baseUrl | quote }}
+            {{- end }}
+            {{- if .Values.ai.engine }}
+            - name: K8SGPT_ENGINE
+              value: {{ .Values.ai.engine | quote }}
+            {{- end }}
+            - name: K8SGPT_TEMPERATURE
+              value: {{ .Values.ai.temperature | quote }}
+            {{- $secretName := "" }}
+            {{- if .Values.ai_secret.existingSecretName }}
+            {{- $secretName = .Values.ai_secret.existingSecretName }}
+            {{- else if .Values.ai_secret.aiPassword }}
+            {{- $secretName = printf "%s-ai-secret" (include "k8sgpt-azure-extensions.fullname" .) }}
+            {{- end }}
+            {{- if $secretName }}
+            - name: K8SGPT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: {{ .Values.ai_secret.existingSecretKey | default "api-key" }}
+            {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "k8sgpt-azure-extensions.fullname" . }}-config
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
