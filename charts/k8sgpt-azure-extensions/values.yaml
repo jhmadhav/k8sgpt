@@ -54,3 +54,10 @@ replicaCount: 1
 
 nodeSelector: {}
 tolerations: []
+
+# Dashboard UI
+dashboard:
+  image:
+    repository: k8sgptextdemo.azurecr.io/k8sgpt-dashboard
+    tag: latest
+    pullPolicy: IfNotPresent

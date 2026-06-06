@@ -1,3 +1,9 @@
+{{- $secretName := "" }}
+{{- if .Values.ai_secret.existingSecretName }}
+{{- $secretName = .Values.ai_secret.existingSecretName }}
+{{- else if .Values.ai_secret.aiPassword }}
+{{- $secretName = printf "%s-ai-secret" (include "k8sgpt-azure-extensions.fullname" .) }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -18,12 +24,31 @@ spec:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
       serviceAccountName: {{ .Values.serviceAccount.name }}
+      initContainers:
+        - name: init-config
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ["/k8sgpt"]
+          args:
+            - integrations
+            - activate
+            - azureextensions
+            - --no-install
+          env:
+            - name: XDG_CONFIG_HOME
+              value: /tmp/k8sgpt-config
+          volumeMounts:
+            - name: config-dir
+              mountPath: /tmp/k8sgpt-config
       containers:
         - name: k8sgpt
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - serve
+            - --http
+            {{- range (splitList "," .Values.analyze.filters) }}
+            - --filter={{ . | trim }}
+            {{- end }}
           env:
             - name: XDG_CONFIG_HOME
               value: /tmp/k8sgpt-config
@@ -41,12 +66,6 @@ spec:
             {{- end }}
             - name: K8SGPT_TEMPERATURE
               value: {{ .Values.ai.temperature | quote }}
-            {{- $secretName := "" }}
-            {{- if .Values.ai_secret.existingSecretName }}
-            {{- $secretName = .Values.ai_secret.existingSecretName }}
-            {{- else if .Values.ai_secret.aiPassword }}
-            {{- $secretName = printf "%s-ai-secret" (include "k8sgpt-azure-extensions.fullname" .) }}
-            {{- end }}
             {{- if $secretName }}
             - name: K8SGPT_PASSWORD
               valueFrom:
@@ -55,9 +74,8 @@ spec:
                   key: {{ .Values.ai_secret.existingSecretKey | default "api-key" }}
             {{- end }}
           volumeMounts:
-            - name: config
-              mountPath: /config
-              readOnly: true
+            - name: config-dir
+              mountPath: /tmp/k8sgpt-config
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
@@ -71,9 +89,8 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 10
       volumes:
-        - name: config
-          configMap:
-            name: {{ include "k8sgpt-azure-extensions.fullname" . }}-config
+        - name: config-dir
+          emptyDir: {}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
