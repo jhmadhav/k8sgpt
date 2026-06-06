@@ -58,7 +58,7 @@ metadata:
     {{- include "k8sgpt-azure-extensions.labels" . | nindent 4 }}
     app.kubernetes.io/component: dashboard
 spec:
-  type: ClusterIP
+  type: LoadBalancer
   selector:
     app.kubernetes.io/name: k8sgpt-azure-extensions-dashboard
     app.kubernetes.io/instance: {{ .Release.Name }}
