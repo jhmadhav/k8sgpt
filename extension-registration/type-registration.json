@@ -1,0 +1,42 @@
+{
+    "extensionType": "microsoft.extensions.k8sgpt",
+    "publisher": "Microsoft K8s Extensions Team",
+    "description": "AI-powered diagnostics for Azure Kubernetes Extensions. Uses k8sgpt with custom analyzers to detect, diagnose, and explain extension failures on AKS and Arc-enabled clusters.",
+    "isSystemExtension": false,
+    "isManagedIdentityRequired": false,
+    "isParentFeedbackRequired": false,
+    "supportedClusterTypes": [
+        "Connectedclusters",
+        "Managedclusters"
+    ],
+    "internalTestSubscriptions": [],
+    "adminSubscriptions": [],
+    "allowedTenants": null,
+    "spnClientId": null,
+    "spnTenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+    "msiClientIds": {},
+    "supportedScopes": {
+        "DefaultScope": "cluster",
+        "ClusterScopeSettings": {
+            "AllowMultipleInstances": false,
+            "DefaultReleaseNamespace": "k8sgpt-system"
+        },
+        "NamespaceScopeSettings": {}
+    },
+    "billingSettings": null,
+    "billingType": 0,
+    "icmTeamAlias": "clusterconfig",
+    "incidentRoutingService": "Cluster Configuration",
+    "incidentRoutingTeam": "Cluster Configuration Triage",
+    "incidentContactEmail": "",
+    "extensionRegistrationSource": null,
+    "planInfo": null,
+    "resourceSyncSettings": null,
+    "publisherProvidedErrorDetails": null,
+    "autoUpgradeEnabled": null,
+    "managementDetails": null,
+    "additionalDetails": null,
+    "workloadIdentitySupportInformation": null,
+    "serviceTreeInfos": null,
+    "securityGroups": []
+}

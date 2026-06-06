@@ -1,0 +1,74 @@
+{
+    "id": "microsoft.extensions.k8sgpt.010",
+    "PartitionKey": "microsoft.extensions.k8sgpt",
+    "creationTime": "2026-06-06T22:00:00.0000000+00:00",
+    "lastModifiedTime": "2026-06-06T22:00:00.0000000+00:00",
+    "calculatedHardDependencies": [],
+    "SupportedClusterTypesV2": {
+        "ConnectedClusters": [
+            {
+                "Distribution": [
+                    "All"
+                ],
+                "DistributionSupported": true,
+                "UnsupportedVersions": []
+            }
+        ],
+        "ManagedClusters": [
+            {
+                "Distribution": [
+                    "All"
+                ],
+                "DistributionSupported": true,
+                "UnsupportedVersions": []
+            }
+        ],
+        "ProvisionedClusters": null,
+        "Appliances": null
+    },
+    "customLocationSettings": null,
+    "extensionReconcilerEnable": true,
+    "reconcilerIntervalInSeconds": 300,
+    "reconcilerSuportedMinChartVersion": null,
+    "extensionSystemParameters": null,
+    "extensionConfigSchema": {
+        "configurationSettings": {
+            "ai.backend": {
+                "type": "string",
+                "description": "AI provider backend (azureopenai, openai, ollama, localai)",
+                "default": "azureopenai"
+            },
+            "ai.model": {
+                "type": "string",
+                "description": "AI model name",
+                "default": "gpt-4o"
+            },
+            "ai.baseUrl": {
+                "type": "string",
+                "description": "AI provider endpoint URL"
+            },
+            "ai.engine": {
+                "type": "string",
+                "description": "Deployment name (Azure OpenAI)"
+            },
+            "ai.temperature": {
+                "type": "string",
+                "description": "AI sampling temperature (0-1)",
+                "default": "0.7"
+            },
+            "analyze.filters": {
+                "type": "string",
+                "description": "Comma-separated list of analyzers to enable",
+                "default": "AzureExtensionConfig,AzureArcAgents"
+            }
+        },
+        "configurationProtectedSettings": {
+            "ai_secret.aiPassword": {
+                "type": "string",
+                "description": "AI provider API key (stored as K8s Secret)"
+            }
+        }
+    },
+    "contentType": "helm",
+    "documentType": "packageconfig"
+}
