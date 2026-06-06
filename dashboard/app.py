@@ -4,7 +4,6 @@ A Streamlit chat UI for k8sgpt Azure Extensions analyzer.
 """
 
 import os
-import json
 import requests
 import streamlit as st
 from datetime import datetime
@@ -27,33 +26,31 @@ with st.sidebar:
         "**Analyzers:**\n"
         "- 🔧 `AzureExtensionConfig` — Extension CRs\n"
         "- 🛡️ `AzureArcAgents` — Arc agent health\n"
-        "- 📦 Core k8sgpt analyzers (ConfigMap, Pod, etc.)"
+        "- 📦 Core k8sgpt analyzers"
     )
 
 
-def fetch_analysis(url: str, explain: bool = False) -> dict:
+def fetch_analysis(url, explain=False):
     """Call k8sgpt HTTP API (POST /v1/analyze)."""
     try:
-        body = {"explain": explain}
-        resp = requests.post(f"{url}/v1/analyze", json=body, timeout=60)
+        resp = requests.post(f"{url}/v1/analyze", json={"explain": explain}, timeout=60)
         resp.raise_for_status()
-        return resp.json()
+        return {"success": True, "data": resp.json()}
     except requests.exceptions.ConnectionError:
-        return {"error": f"Cannot connect to k8sgpt at {url}"}
+        return {"success": False, "msg": f"Cannot connect to k8sgpt at {url}"}
     except requests.exceptions.Timeout:
-        return {"error": "Request timed out (60s)"}
+        return {"success": False, "msg": "Request timed out (60s)"}
     except Exception as e:
-        return {"error": str(e)}
+        return {"success": False, "msg": str(e)}
 
 
-def is_azure_result(result: dict) -> bool:
+def is_azure_result(result):
     kind = result.get("kind", "")
     return "AzureExtension" in kind or "AzureArc" in kind
 
 
-def severity_icon(result: dict) -> str:
-    errors = result.get("error", [])
-    texts = " ".join(e.get("text", "") for e in errors)
+def severity_icon(result):
+    texts = " ".join(e.get("text", "") for e in result.get("error", []))
     if "Failed" in texts or "CrashLoop" in texts or "OOMKilled" in texts:
         return "🔴"
     if "Pending" in texts or "Updating" in texts or "pending-install" in texts:
@@ -63,13 +60,12 @@ def severity_icon(result: dict) -> str:
     return "⚠️"
 
 
-def render_result(result: dict):
+def render_result(result):
     kind = result.get("kind", "Unknown")
     name = result.get("name", "Unknown")
     errors = result.get("error", [])
     details = result.get("details", "")
     icon = severity_icon(result)
-
     is_azure = is_azure_result(result)
     badge = "🔷 Azure" if is_azure else "⬜ Core"
 
@@ -88,7 +84,6 @@ def render_result(result: dict):
                 st.error(f"🔑 {text}")
             else:
                 st.warning(f"⚠️ {text}")
-
         if details:
             st.markdown("---")
             st.markdown("### 🤖 AI Explanation")
@@ -97,12 +92,8 @@ def render_result(result: dict):
 
 # --- Main ---
 st.title("🔍 Azure Extensions Health Copilot")
+st.caption(f"Connected to: `{api_url}` | ⏱ {datetime.now().strftime('%H:%M:%S')}")
 
-col_status, col_time = st.columns([3, 1])
-with col_time:
-    st.caption(f"⏱ {datetime.now().strftime('%H:%M:%S')}")
-
-# Action buttons
 col1, col2, col3 = st.columns(3)
 with col1:
     scan_clicked = st.button("🔍 Scan Extensions", use_container_width=True, type="primary")
@@ -112,52 +103,44 @@ with col3:
     clear_clicked = st.button("🗑️ Clear", use_container_width=True)
 
 if clear_clicked:
-    if "last_scan" in st.session_state:
-        del st.session_state["last_scan"]
+    st.session_state.pop("scan_result", None)
     st.rerun()
 
+# Run scan
 if scan_clicked or explain_clicked:
     with st.spinner("🔍 Analyzing cluster extensions..."):
-        data = fetch_analysis(api_url, explain=explain_clicked)
-    st.session_state["last_scan"] = data
+        result = fetch_analysis(api_url, explain=explain_clicked)
+    st.session_state["scan_result"] = result
 
-# Display results
-if "last_scan" in st.session_state:
-    data = st.session_state["last_scan"]
+# Display
+if "scan_result" in st.session_state:
+    result = st.session_state["scan_result"]
 
-    if "error" in data and isinstance(data["error"], str):
-        st.error(f"❌ {data['error']}")
+    if not result["success"]:
+        st.error(f"❌ {result['msg']}")
     else:
-        results = data.get("results", [])
-        api_errors = data.get("errors", [])
-        status = data.get("status", "OK")
+        data = result["data"]
+        results = data.get("results") or []
+        api_errors = data.get("errors") or []
         problems = data.get("problems", 0)
 
-        # Split results
         azure_results = [r for r in results if is_azure_result(r)]
         core_results = [r for r in results if not is_azure_result(r)]
 
-        # Summary metrics
+        # Metrics
         m1, m2, m3, m4 = st.columns(4)
-        with m1:
-            if azure_results:
-                st.metric("Azure Extension Issues", len(azure_results), delta=None)
-            else:
-                st.metric("Azure Extension Issues", "0 ✅")
-        with m2:
-            st.metric("Total Issues", problems)
-        with m3:
-            st.metric("Core Issues", len(core_results))
-        with m4:
-            st.metric("RBAC Errors", len(api_errors))
+        m1.metric("🔷 Azure Issues", len(azure_results) if azure_results else "0 ✅")
+        m2.metric("📊 Total Issues", problems)
+        m3.metric("⬜ Core Issues", len(core_results))
+        m4.metric("🔐 RBAC Warnings", len(api_errors))
 
-        # Azure extension results (always shown)
+        # Azure results
         st.markdown("## 🔷 Azure Extension Analysis")
         if azure_results:
             for r in azure_results:
                 render_result(r)
         else:
-            st.success("✅ All Azure extensions are healthy!")
+            st.success("✅ All Azure extensions are healthy! No problems detected.")
 
         # RBAC warnings
         if api_errors:
@@ -165,7 +148,7 @@ if "last_scan" in st.session_state:
                 for e in api_errors:
                     st.caption(f"• {e}")
 
-        # Core results (optional)
+        # Core results
         if show_all and core_results:
             st.markdown("## ⬜ Core k8sgpt Analysis")
             for r in core_results:
