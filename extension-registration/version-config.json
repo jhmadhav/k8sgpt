@@ -1,0 +1,28 @@
+{
+    "creationTime": "2026-06-06T22:00:00.0000000+00:00",
+    "lastModifiedTime": null,
+    "artifactEndpoints": [
+        {
+            "regions": [
+                "eastus2"
+            ],
+            "releasetrains": [
+                "dev"
+            ],
+            "fullPathToHelmChart": "k8sgptextdemo.azurecr.io/helm/k8sgpt-azure-extensions",
+            "extensionUpdateFrequencyInMinutes": 60,
+            "autoUpdateImagePath": null,
+            "isCustomerHidden": false,
+            "stopRollout": false,
+            "rollbackVersion": null,
+            "packageConfigName": "microsoft.extensions.k8sgpt.010",
+            "systemParameters": null
+        }
+    ],
+    "PartitionKey": "microsoft.extensions.k8sgpt",
+    "id": "0.1.0",
+    "majorVersion": 0,
+    "minorVersion": 1,
+    "patchVersion": 0,
+    "documentType": "versionconfig"
+}

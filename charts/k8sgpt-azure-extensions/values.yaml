@@ -1,0 +1,63 @@
+# k8sgpt Azure Extensions Analyzer
+# Configuration values - these map to az k8s-extension --configuration-settings
+
+image:
+  repository: k8sgptextdemo.azurecr.io/k8sgpt-azure-extensions
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# AI backend configuration (non-sensitive)
+ai:
+  backend: "openai"           # openai | azureopenai | ollama | localai | noopai
+  model: "gpt-4o"             # model name
+  baseUrl: ""                 # base URL for the AI provider
+  engine: ""                  # deployment name (Azure OpenAI only)
+  temperature: "0.7"
+
+# AI secret configuration
+# When using --configuration-protected-settings, the key is injected as a Secret
+ai_secret:
+  # Use an existing secret (takes precedence)
+  existingSecretName: ""
+  existingSecretKey: "api-key"
+  # Or let the chart create one from protected settings
+  # Set via: --configuration-protected-settings aiPassword=<key>
+  aiPassword: ""
+
+# Analyzer configuration
+analyze:
+  interval: "5m"              # how often to re-analyze
+  filters: "AzureExtensionConfig,AzureArcAgents"
+  namespace: ""               # empty = all namespaces
+
+# Sink for results (optional)
+sink:
+  type: ""                    # slack | msteams | ""
+  webhook: ""
+
+serviceAccount:
+  create: true
+  name: "k8sgpt-azure-extensions"
+
+rbac:
+  create: true
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+replicaCount: 1
+
+nodeSelector: {}
+tolerations: []
+
+# Dashboard UI
+dashboard:
+  image:
+    repository: k8sgptextdemo.azurecr.io/k8sgpt-dashboard
+    tag: latest
+    pullPolicy: IfNotPresent

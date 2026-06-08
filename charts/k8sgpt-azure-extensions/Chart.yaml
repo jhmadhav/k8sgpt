@@ -1,0 +1,13 @@
+apiVersion: v2
+name: k8sgpt-azure-extensions
+description: k8sgpt with Azure K8s Extensions analyzer - diagnoses extension failures on AKS and Arc clusters
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - k8sgpt
+  - azure
+  - kubernetes
+  - extensions
+  - diagnostics
+  - ai
